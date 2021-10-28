@@ -117,6 +117,7 @@
         repo: https://github.com/kodekloudhub/learning-app-ecommerce.git
         dest: /var/www/html/
         accept_hostkey: yes
+        force: yes
       become: yes
 
     - name: Rename db host in index
