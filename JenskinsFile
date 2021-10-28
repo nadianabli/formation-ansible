@@ -1,0 +1,9 @@
+node(){
+    stage('git-clone'){
+        git branch: 'master',url: 'https://github.com/nadianabli/formation-ansible.git'
+        //sh "git clone -b master https://github.com/nadianabli/formation-ansible.git"
+    }
+    stage('Deploy'){
+        sh "ansible-playbook -i inventory.txt lamp-playbook.yml -v"
+    }
+}
