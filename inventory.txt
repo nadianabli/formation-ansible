@@ -1,0 +1,1 @@
+lamp_auto ansible_host=192.168.186.134 ansible_user=centos ansible_ssh_pass=centos

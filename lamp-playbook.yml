@@ -1,0 +1,127 @@
+- name: Install web and database servers
+  hosts: lamp_auto
+  become: yes
+  tasks:
+    - name: install firewall
+      yum:
+        name: firewalld
+        state: present
+      become: yes
+
+    - name: start firewall
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+      become: yes
+
+    - name: install db server
+      yum:
+        name: mariadb-server
+        state: present
+      become: yes
+    
+    - name: Configure firewall for Database
+      shell: "{{ item }}"
+      with_items:
+        - firewall-cmd --permanent --zone=public --add-port=3306/tcp
+        - firewall-cmd --reload
+      become: yes
+
+    - name: start db server
+      service:
+        name: mariadb
+        state: started
+        enabled: yes
+      become: yes
+
+    - name: install pip
+      yum:
+        name:
+          - python3
+        state: present
+      become: yes
+
+    - name: Make sure pymysql is present
+      become: yes
+      pip:
+        name: pymysql
+        state: present
+
+    - name: Create Database
+      mysql_db:
+        login_user: root
+        name: ecomdb
+        state: present
+      become: yes
+
+    - name: Create user
+      mysql_user:
+        name: ecomuser
+        password: ecompassword
+        host: localhost
+        priv: "*.*:ALL,GRANT"
+        login_user: root
+        state: present
+      become: yes
+
+    - name: Copy inventory file
+      copy:
+        src: db-load-script.sql
+        dest: /tmp/db-load-script.sql
+
+    - name: Load Product Inventory
+      shell: mysql < /tmp/db-load-script.sql -u root
+      become: yes
+
+    - name: install web packages
+      yum:
+        name:
+          - httpd
+          - php
+          - php-mysqlnd
+        state: latest
+      become: yes
+
+    - name: Configure firewall for web server
+      shell: "{{ item }}"
+      with_items:
+        - firewall-cmd --permanent --zone=public --add-port=80/tcp
+        - firewall-cmd --permanent --zone=public --add-port=5000/tcp
+        - firewall-cmd --reload
+      become: yes
+
+    - name: Rename index
+      lineinfile:
+        dest: /etc/httpd/conf/httpd.conf
+        regexp: "^(.*)DirectoryIndex index.html(.*)$"
+        line: "DirectoryIndex index.php"
+        backrefs: yes
+      become: yes
+
+    - name: start web server
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+      become: yes
+
+    - name: install git
+      yum:
+        name: git
+        state: present
+      become: yes
+
+    - name: Download code
+      git:
+        repo: https://github.com/kodekloudhub/learning-app-ecommerce.git
+        dest: /var/www/html/
+        accept_hostkey: yes
+      become: yes
+
+    - name: Rename db host in index
+      replace:
+        path: /var/www/html/index.php
+        regexp: "172.20.1.101"
+        replace: "localhost"
+      become: yes
